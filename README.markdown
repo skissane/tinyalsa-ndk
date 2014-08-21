@@ -1,15 +1,7 @@
-tinyalsa: a small library to interface with ALSA in the Linux kernel
+tinyalsa-ndk
+===========
 
-The aims are:
-
-- Provide a basic pcm and mixer API
-- If it's not absolutely needed, don't add it to the API
-- Avoid supporting complex and unnecessary operations that could be
-  dealt with at a higher level
-
----
-
-tinyalsa-ndk: a slightly modified tinyalsa lib to make it compile using android-ndk - especially the tinymix utility.
+This is a slightly modified ['tinyalsa'](https://github.com/tinyalsa/tinyalsa) lib to make it compile using android-ndk - especially the tinymix utility.
 
 - This repo also holds the precompiled binaries (compiled with ndk) of tinymix and related utils in the libs/armeabi/ directory.
 
