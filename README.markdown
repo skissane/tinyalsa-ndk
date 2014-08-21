@@ -10,6 +10,7 @@ how to compile:
 Simply cd into the jni folder, then call ndk-build normally
 
 Example:
+<pre>
 kasidit@kasidit:~/tinyalsa-ndk/jni$ ~/adt/sdk/ndk/ndk-build
 [armeabi] Compile thumb  : tinyalsa <= mixer.c
 [armeabi] Compile thumb  : tinyalsa <= pcm.c
@@ -28,3 +29,4 @@ kasidit@kasidit:~/tinyalsa-ndk/jni$ ~/adt/sdk/ndk/ndk-build
 [armeabi] Executable     : tinyplay
 [armeabi] Install        : tinyplay => libs/armeabi/tinyplay
 kasidit@kasidit:~/tinyalsa-ndk/jni$ 
+</pre>
