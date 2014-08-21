@@ -7,3 +7,9 @@ The aims are:
 - Avoid supporting complex and unnecessary operations that could be
   dealt with at a higher level
 
+---
+
+tinyalsa-ndk: a slightly modified tinyalsa lib to make it compile using android-ndk - especially the tinymix utility.
+
+- This repo also holds the precompiled binaries (compiled with ndk) of tinymix and related utils in the libs/armeabi/ directory.
+

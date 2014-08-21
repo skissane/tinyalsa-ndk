@@ -26,7 +26,7 @@
 ** DAMAGE.
 */
 
-#include <tinyalsa/asoundlib.h>
+#include "include/tinyalsa/asoundlib.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
