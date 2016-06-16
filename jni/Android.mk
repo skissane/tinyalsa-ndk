@@ -8,6 +8,7 @@ LOCAL_SHARED_LIBRARIES:= libcutils libutils
 LOCAL_MODULE_TAGS := optional
 LOCAL_PRELINK_MODULE := false
 
+APP_PLATFORM := android-16
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -17,6 +18,7 @@ LOCAL_MODULE := tinyplay
 LOCAL_SHARED_LIBRARIES:= libcutils libutils libtinyalsa
 LOCAL_MODULE_TAGS := optional
 
+APP_PLATFORM := android-16
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
@@ -26,6 +28,7 @@ LOCAL_MODULE := tinycap
 LOCAL_SHARED_LIBRARIES:= libcutils libutils libtinyalsa
 LOCAL_MODULE_TAGS := optional
 
+APP_PLATFORM := android-16
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
@@ -35,6 +38,7 @@ LOCAL_MODULE := tinymix
 LOCAL_SHARED_LIBRARIES:= libcutils libutils libtinyalsa
 LOCAL_MODULE_TAGS := optional
 
+APP_PLATFORM := android-16
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
@@ -44,4 +48,5 @@ LOCAL_MODULE := tinypcminfo
 LOCAL_SHARED_LIBRARIES:= libcutils libutils libtinyalsa
 LOCAL_MODULE_TAGS := optional
 
+APP_PLATFORM := android-16
 include $(BUILD_EXECUTABLE)
