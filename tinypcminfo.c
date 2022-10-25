@@ -26,7 +26,9 @@
 ** DAMAGE.
 */
 
+#include "include/sound/asound.h"
 #include "include/tinyalsa/asoundlib.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -92,7 +94,7 @@ static const char *format_lookup[] = {
 /* Returns a human readable name for the format associated with bit_index,
  * NULL if bit_index is not known.
  */
-inline const char *pcm_get_format_name(unsigned bit_index)
+static inline const char *pcm_get_format_name(unsigned bit_index)
 {
     return bit_index < ARRAY_SIZE(format_lookup) ? format_lookup[bit_index] : NULL;
 }
@@ -125,7 +127,7 @@ int main(int argc, char **argv)
             argv++;
     }
 
-    printf("Info for card %d, device %d:\n", card, device);
+    printf("Info for card %u, device %u:\n", card, device);
 
     for (i = 0; i < 2; i++) {
         struct pcm_params *params;

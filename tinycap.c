@@ -26,12 +26,15 @@
 ** DAMAGE.
 */
 
+#include "include/sound/asound.h"
 #include "include/tinyalsa/asoundlib.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <signal.h>
 #include <string.h>
+#include <time.h>
 
 #define ID_RIFF 0x46464952
 #define ID_WAVE 0x45564157
@@ -57,14 +60,13 @@ struct wav_header {
 };
 
 int capturing = 1;
-int prinfo = 1;
 
 unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
                             unsigned int channels, unsigned int rate,
                             enum pcm_format format, unsigned int period_size,
-                            unsigned int period_count);
+                            unsigned int period_count, unsigned int cap_time);
 
-void sigint_handler(int sig)
+void sigint_handler(int sig __unused)
 {
     capturing = 0;
 }
@@ -81,26 +83,20 @@ int main(int argc, char **argv)
     unsigned int frames;
     unsigned int period_size = 1024;
     unsigned int period_count = 4;
+    unsigned int cap_time = 0;
     enum pcm_format format;
-    int no_header = 0;
 
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s {file.wav | --} [-D card] [-d device] [-c channels] "
-                "[-r rate] [-b bits] [-p period_size] [-n n_periods]\n\n"
-                "Use -- for filename to send raw PCM to stdout\n", argv[0]);
+        fprintf(stderr, "Usage: %s file.wav [-D card] [-d device]"
+                " [-c channels] [-r rate] [-b bits] [-p period_size]"
+                " [-n n_periods] [-T capture time]\n", argv[0]);
         return 1;
     }
 
-    if (strcmp(argv[1],"--") == 0) {
-        file = stdout;
-        prinfo = 0;
-        no_header = 1;
-    } else {
-        file = fopen(argv[1], "wb");
-        if (!file) {
-            fprintf(stderr, "Unable to create file '%s'\n", argv[1]);
-            return 1;
-        }
+    file = fopen(argv[1], "wb");
+    if (!file) {
+        fprintf(stderr, "Unable to create file '%s'\n", argv[1]);
+        return 1;
     }
 
     /* parse command line arguments */
@@ -134,6 +130,10 @@ int main(int argc, char **argv)
             argv++;
             if (*argv)
                 period_count = atoi(*argv);
+        } else if (strcmp(*argv, "-T") == 0) {
+            argv++;
+            if (*argv)
+                cap_time = atoi(*argv);
         }
         if (*argv)
             argv++;
@@ -159,7 +159,8 @@ int main(int argc, char **argv)
         format = PCM_FORMAT_S16_LE;
         break;
     default:
-        fprintf(stderr, "%d bits is not supported.\n", bits);
+        fprintf(stderr, "%u bits is not supported.\n", bits);
+        fclose(file);
         return 1;
     }
 
@@ -169,26 +170,22 @@ int main(int argc, char **argv)
     header.data_id = ID_DATA;
 
     /* leave enough room for header */
-    if (!no_header) {
-        fseek(file, sizeof(struct wav_header), SEEK_SET);
-    }
+    fseek(file, sizeof(struct wav_header), SEEK_SET);
 
     /* install signal handler and begin capturing */
     signal(SIGINT, sigint_handler);
+    signal(SIGHUP, sigint_handler);
+    signal(SIGTERM, sigint_handler);
     frames = capture_sample(file, card, device, header.num_channels,
                             header.sample_rate, format,
-                            period_size, period_count);
-    if (prinfo) {
-        printf("Captured %d frames\n", frames);
-    }
+                            period_size, period_count, cap_time);
+    printf("Captured %u frames\n", frames);
 
     /* write header now all information is known */
-    if (!no_header) {
-        header.data_sz = frames * header.block_align;
-        header.riff_sz = header.data_sz + sizeof(header) - 8;
-        fseek(file, 0, SEEK_SET);
-        fwrite(&header, sizeof(struct wav_header), 1, file);
-    }
+    header.data_sz = frames * header.block_align;
+    header.riff_sz = header.data_sz + sizeof(header) - 8;
+    fseek(file, 0, SEEK_SET);
+    fwrite(&header, sizeof(struct wav_header), 1, file);
 
     fclose(file);
 
@@ -198,14 +195,18 @@ int main(int argc, char **argv)
 unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
                             unsigned int channels, unsigned int rate,
                             enum pcm_format format, unsigned int period_size,
-                            unsigned int period_count)
+                            unsigned int period_count, unsigned int cap_time)
 {
     struct pcm_config config;
     struct pcm *pcm;
     char *buffer;
     unsigned int size;
     unsigned int bytes_read = 0;
+    unsigned int frames = 0;
+    struct timespec end;
+    struct timespec now;
 
+    memset(&config, 0, sizeof(config));
     config.channels = channels;
     config.rate = rate;
     config.period_size = period_size;
@@ -225,16 +226,18 @@ unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
     size = pcm_frames_to_bytes(pcm, pcm_get_buffer_size(pcm));
     buffer = malloc(size);
     if (!buffer) {
-        fprintf(stderr, "Unable to allocate %d bytes\n", size);
+        fprintf(stderr, "Unable to allocate %u bytes\n", size);
         free(buffer);
         pcm_close(pcm);
         return 0;
     }
 
-    if (prinfo) {
-        printf("Capturing sample: %u ch, %u hz, %u bit\n", channels, rate,
+    printf("Capturing sample: %u ch, %u hz, %u bit\n", channels, rate,
            pcm_format_to_bits(format));
-    }
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    end.tv_sec = now.tv_sec + cap_time;
+    end.tv_nsec = now.tv_nsec;
 
     while (capturing && !pcm_read(pcm, buffer, size)) {
         if (fwrite(buffer, 1, size, file) != size) {
@@ -242,10 +245,16 @@ unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
             break;
         }
         bytes_read += size;
+        if (cap_time) {
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            if (now.tv_sec > end.tv_sec ||
+                (now.tv_sec == end.tv_sec && now.tv_nsec >= end.tv_nsec))
+                break;
+        }
     }
 
+    frames = pcm_bytes_to_frames(pcm, bytes_read);
     free(buffer);
     pcm_close(pcm);
-    return pcm_bytes_to_frames(pcm, bytes_read);
+    return frames;
 }
-
